@@ -14,7 +14,6 @@ import android.os.PowerManager;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.util.Log;
-import android.widget.Toast;
 
 import com.google.gson.Gson;
 
@@ -23,8 +22,10 @@ import org.json.JSONObject;
 
 import java.io.IOException;
 import java.util.Calendar;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.Set;
 
-import okhttp3.Cookie;
 import okhttp3.Interceptor;
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
@@ -35,17 +36,61 @@ import okhttp3.Response;
 public class TrackingReceiver extends BroadcastReceiver {
     private static final String TAG = "TrackingReceiver";
     private static final String BACKEND_URL = "https://vladislavsmirnov.ru/api/log";
+    private static final String PENDING_LOCATIONS_KEY = "pendingLocations";
     private static final MediaType JSON = MediaType.parse("application/json; charset=utf-8");
 
-    private class HttpTask extends AsyncTask<Object, Void, Boolean> {
+    private class PendingLocation {
+        Location location;
+        long time;
+
+        PendingLocation(Location location, long time) {
+            this.location = location;
+            this.time = time;
+        }
+    }
+
+    private class HttpTask extends AsyncTask<Void, Void, Boolean> {
         private final Context context;
         private final PowerManager.WakeLock wakeLock;
+        private final Location location;
+        private final String token;
+
+        private void sendPendingLocations(OkHttpClient client) {
+            final SharedPreferences sharedPreferences = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+            Set<String> pendingLocations = sharedPreferences.getStringSet(PENDING_LOCATIONS_KEY, new HashSet<String>());
+            Iterator<String> i = pendingLocations.iterator();
+
+            while (i.hasNext()) {
+                String jsonLocation = i.next();
+                PendingLocation location = new Gson().fromJson(jsonLocation, PendingLocation.class);
+
+                final JSONObject json = new JSONObject();
+                try {
+                    json.put("time", location.time);
+                    json.put("latitude", location.location.getLatitude());
+                    json.put("longitude", location.location.getLongitude());
+                    json.put("accuracy", location.location.getAccuracy());
+                    json.put("speed", location.location.getSpeed());
+
+                    final Request request = new Request.Builder().url(BACKEND_URL).post(RequestBody.create(JSON, json.toString())).build();
+                    Response response = client.newCall(request).execute();
+                    if (!response.isSuccessful()) {
+                        Log.e(TAG, "Can't write pending log for token " + token);
+                        continue;
+                    }
+                } catch (JSONException | IOException e) {
+                    Log.e(TAG, "Can't write pending log for token " + token);
+                    continue;
+                }
+
+                i.remove();
+            }
+
+            sharedPreferences.edit().putStringSet(PENDING_LOCATIONS_KEY, pendingLocations).apply();
+        }
 
         @Override
-        protected Boolean doInBackground(Object... params) {
-            final Location location = (Location) params[0];
-            final String token = (String) params[1];
-
+        protected Boolean doInBackground(Void... params) {
             OkHttpClient client = new OkHttpClient().newBuilder()
                     .addInterceptor(new Interceptor() {
                         @Override
@@ -71,8 +116,11 @@ public class TrackingReceiver extends BroadcastReceiver {
                 Response response = client.newCall(request).execute();
                 if (!response.isSuccessful()) {
                     Log.e(TAG, "Can't write log for token " + token);
+                    return false;
                 }
+                sendPendingLocations(client);
             } catch (JSONException | IOException e) {
+                Log.e(TAG, "Can't write pending log for token " + token);
                 return false;
             }
             Log.i(TAG, "Location is sent");
@@ -81,13 +129,24 @@ public class TrackingReceiver extends BroadcastReceiver {
 
         @Override
         protected void onPostExecute(Boolean success) {
-            if (!success) Toast.makeText(context, "Tracking send error", Toast.LENGTH_SHORT).show();
+            if (!success) {
+                final SharedPreferences sharedPreferences = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+                Set<String> pendingLocations = sharedPreferences.getStringSet(PENDING_LOCATIONS_KEY, new HashSet<String>());
+
+                PendingLocation location = new PendingLocation(this.location, System.currentTimeMillis() / 1000);
+                String json = new Gson().toJson(location);
+                pendingLocations.add(json);
+
+                sharedPreferences.edit().putStringSet(PENDING_LOCATIONS_KEY, pendingLocations).apply();
+            }
             wakeLock.release();
         }
 
-        HttpTask(Context context, PowerManager.WakeLock wakeLock) {
+        HttpTask(Context context, PowerManager.WakeLock wakeLock, Location location, String token) {
             this.context = context;
             this.wakeLock = wakeLock;
+            this.location = location;
+            this.token = token;
         }
     }
 
@@ -147,8 +206,8 @@ public class TrackingReceiver extends BroadcastReceiver {
                 String json = new Gson().toJson(location);
                 sharedPreferences.edit().putString("lastLocation", json).apply();
 
-                final HttpTask task = new HttpTask(context, wakeLock);
-                task.execute(location, token);
+                final HttpTask task = new HttpTask(context, wakeLock, location, token);
+                task.execute();
             }
         });
     }

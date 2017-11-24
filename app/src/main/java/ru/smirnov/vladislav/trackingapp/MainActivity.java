@@ -1,22 +1,18 @@
 package ru.smirnov.vladislav.trackingapp;
 
 import android.Manifest;
-import android.content.Context;
-import android.content.DialogInterface;
-import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
-import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 
 public class MainActivity extends AppCompatActivity {
 
     public static final int MY_PERMISSIONS_REQUEST_LOCATION = 99;
-    private static final int TIMER_INTERVAL_MSEC = 5 * 60 * 1000;
+    private static final int TIMER_INTERVAL_MSEC = 5000; //5 * 60 * 1000;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
