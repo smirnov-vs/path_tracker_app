@@ -150,7 +150,7 @@ public class TrackingReceiver extends BroadcastReceiver {
         }
     }
 
-    private static boolean timerEnabled;
+    private static boolean timerEnabled = false;
 
     static void setTimer(Context context, long timeout) {
         final PendingIntent intent = PendingIntent.getBroadcast(context, 0, new Intent(context, TrackingReceiver.class), 0);
@@ -168,10 +168,6 @@ public class TrackingReceiver extends BroadcastReceiver {
 
     static boolean isEnabled() {
         return timerEnabled;
-    }
-
-    private void saveLocation() {
-
     }
 
     @Override

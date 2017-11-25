@@ -2,6 +2,7 @@ package ru.smirnov.vladislav.trackingapp;
 
 import android.Manifest;
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
@@ -18,7 +19,6 @@ import android.widget.ToggleButton;
 public class MainActivity extends AppCompatActivity {
 
     public static final int MY_PERMISSIONS_REQUEST_LOCATION = 99;
-    private static final int TIMER_INTERVAL_MSEC = 5000; //5 * 60 * 1000;
     private static final String TRACKING_ENABLED_KEY = "trackingEnabled";
 
     private Button buttonLogout;
@@ -38,10 +38,11 @@ public class MainActivity extends AppCompatActivity {
 
         toggle.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                if (isChecked && !TrackingReceiver.isEnabled()) {
-                    TrackingReceiver.setTimer(MainActivity.this, TIMER_INTERVAL_MSEC);
-                } else if (TrackingReceiver.isEnabled()) {
-                    TrackingReceiver.stopTimer(MainActivity.this);
+                Intent intent = new Intent(MainActivity.this, TrackingService.class);
+                if (isChecked) {
+                    startService(intent);
+                } else {
+                    stopService(intent);
                 }
 
                 sharedPreferences.edit().putBoolean(TRACKING_ENABLED_KEY, isChecked).apply();
