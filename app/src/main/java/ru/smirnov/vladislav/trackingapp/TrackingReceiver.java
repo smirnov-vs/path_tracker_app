@@ -163,7 +163,7 @@ public class TrackingReceiver extends BroadcastReceiver {
         final PendingIntent intent = PendingIntent.getBroadcast(context, 0, new Intent(context, TrackingReceiver.class), 0);
         final AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
         alarmManager.cancel(intent);
-        timerEnabled = true;
+        timerEnabled = false;
     }
 
     static boolean isEnabled() {
