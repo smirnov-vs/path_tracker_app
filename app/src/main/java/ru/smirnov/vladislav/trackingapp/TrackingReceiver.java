@@ -57,7 +57,7 @@ public class TrackingReceiver extends BroadcastReceiver {
 
         private void sendPendingLocations(OkHttpClient client) {
             final SharedPreferences sharedPreferences = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
-            Set<String> pendingLocations = sharedPreferences.getStringSet(PENDING_LOCATIONS_KEY, new HashSet<String>());
+            Set<String> pendingLocations = sharedPreferences.getStringSet(PENDING_LOCATIONS_KEY, new HashSet<>());
             Iterator<String> i = pendingLocations.iterator();
 
             while (i.hasNext()) {
@@ -92,17 +92,14 @@ public class TrackingReceiver extends BroadcastReceiver {
         @Override
         protected Boolean doInBackground(Void... params) {
             OkHttpClient client = new OkHttpClient().newBuilder()
-                    .addInterceptor(new Interceptor() {
-                        @Override
-                        public Response intercept(@NonNull Chain chain) throws IOException {
-                            final Request original = chain.request();
+                    .addInterceptor(chain -> {
+                        final Request original = chain.request();
 
-                            final Request authorized = original.newBuilder()
-                                    .addHeader("Cookie", "token=" + token)
-                                    .build();
+                        final Request authorized = original.newBuilder()
+                                .addHeader("Cookie", "token=" + token)
+                                .build();
 
-                            return chain.proceed(authorized);
-                        }
+                        return chain.proceed(authorized);
                     }).build();
 
             final JSONObject json = new JSONObject();
@@ -131,7 +128,7 @@ public class TrackingReceiver extends BroadcastReceiver {
         protected void onPostExecute(Boolean success) {
             if (!success) {
                 final SharedPreferences sharedPreferences = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
-                Set<String> pendingLocations = sharedPreferences.getStringSet(PENDING_LOCATIONS_KEY, new HashSet<String>());
+                Set<String> pendingLocations = sharedPreferences.getStringSet(PENDING_LOCATIONS_KEY, new HashSet<>());
 
                 PendingLocation location = new PendingLocation(this.location, System.currentTimeMillis() / 1000);
                 String json = new Gson().toJson(location);
@@ -191,20 +188,17 @@ public class TrackingReceiver extends BroadcastReceiver {
         wakeLock.acquire();
 
         Log.i(TAG, "New location is requested");
-        TrackingLocationProvider.getInstance().getNewLocation(new NewLocationCallback() {
-            @Override
-            public void onNewLocationCallback(Location location) {
-                Log.i(TAG, "New location is received");
-                Log.i(TAG, "GPS: " + location.getLatitude() + ", " + location.getLongitude());
-                Log.i(TAG, "Accuracy: " + location.getAccuracy());
-                Log.i(TAG, "Speed: " + location.getSpeed());
+        TrackingLocationProvider.getInstance().getNewLocation(location -> {
+            Log.i(TAG, "New location is received");
+            Log.i(TAG, "GPS: " + location.getLatitude() + ", " + location.getLongitude());
+            Log.i(TAG, "Accuracy: " + location.getAccuracy());
+            Log.i(TAG, "Speed: " + location.getSpeed());
 
-                String json = new Gson().toJson(location);
-                sharedPreferences.edit().putString("lastLocation", json).apply();
+            String json = new Gson().toJson(location);
+            sharedPreferences.edit().putString("lastLocation", json).apply();
 
-                final HttpTask task = new HttpTask(context, wakeLock, location, token);
-                task.execute();
-            }
+            final HttpTask task = new HttpTask(context, wakeLock, location, token);
+            task.execute();
         });
     }
 }

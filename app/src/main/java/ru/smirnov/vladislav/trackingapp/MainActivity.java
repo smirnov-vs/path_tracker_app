@@ -21,40 +21,33 @@ public class MainActivity extends AppCompatActivity {
     public static final int MY_PERMISSIONS_REQUEST_LOCATION = 99;
     private static final String TRACKING_ENABLED_KEY = "trackingEnabled";
 
-    private Button buttonLogout;
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
+        Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
         final SharedPreferences sharedPreferences = this.getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
         Boolean isTrackingEnabled = sharedPreferences.getBoolean(TRACKING_ENABLED_KEY, false);
 
-        ToggleButton toggle = (ToggleButton) findViewById(R.id.toggleButton);
-        buttonLogout = (Button) findViewById(R.id.buttonLogout);
+        ToggleButton toggle = findViewById(R.id.toggleButton);
+        Button buttonLogout = findViewById(R.id.buttonLogout);
 
-        toggle.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                Intent intent = new Intent(MainActivity.this, TrackingService.class);
-                if (isChecked) {
-                    startService(intent);
-                } else {
-                    stopService(intent);
-                }
-
-                sharedPreferences.edit().putBoolean(TRACKING_ENABLED_KEY, isChecked).apply();
+        toggle.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            Intent intent = new Intent(MainActivity.this, TrackingService.class);
+            if (isChecked) {
+                startService(intent);
+            } else {
+                stopService(intent);
             }
+
+            sharedPreferences.edit().putBoolean(TRACKING_ENABLED_KEY, isChecked).apply();
         });
         toggle.setChecked(isTrackingEnabled);
 
-        buttonLogout.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                //TODO: logout
-            }
+        buttonLogout.setOnClickListener(v -> {
+            //TODO: logout
         });
     }
 
