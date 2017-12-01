@@ -34,10 +34,11 @@ dependencies {
     androidTestCompile('com.android.support.test.espresso:espresso-core:2.2.2', {
         exclude group: 'com.android.support', module: 'support-annotations'
     })
+
+    compile "com.google.android.gms:play-services-gcm:11.6.0"
     compile 'com.google.android.gms:play-services-location:11.6.0'
     compile 'com.android.support:appcompat-v7:27.0.1'
     compile 'com.android.support:design:27.0.1'
-    compile 'com.android.support.constraint:constraint-layout:1.0.2'
     compile 'com.squareup.okhttp3:okhttp:3.9.0'
     compile 'com.squareup.okhttp3:okhttp-urlconnection:3.9.0'
     compile 'com.google.code.gson:gson:2.8.0'

@@ -118,7 +118,11 @@ public class LoginActivity extends AppCompatActivity {
             focusView.requestFocus();
         } else {
             showProgress(true);
-            mAuthTask = new UserLoginTask(email, password);
+
+            final SharedPreferences sharedPreferences = this.getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+            String gcm_token = sharedPreferences.getString("gcm_token", null);
+
+            mAuthTask = new UserLoginTask(email, password, gcm_token);
             mAuthTask.execute((Void) null);
         }
     }
@@ -151,12 +155,14 @@ public class LoginActivity extends AppCompatActivity {
 
     public class UserLoginTask extends AsyncTask<Void, Void, String> {
 
-        private final String mEmail;
-        private final String mPassword;
+        private final String email;
+        private final String password;
+        private final String gcm_token;
 
-        UserLoginTask(String email, String password) {
-            mEmail = email;
-            mPassword = password;
+        UserLoginTask(String email, String password, String gcm_token) {
+            this.email = email;
+            this.password = password;
+            this.gcm_token = gcm_token;
         }
 
         @Override
@@ -166,8 +172,9 @@ public class LoginActivity extends AppCompatActivity {
             final OkHttpClient client = new OkHttpClient.Builder().cookieJar(new JavaNetCookieJar(cookieManager)).build();
             final JSONObject json = new JSONObject();
             try {
-                json.put("email", mEmail);
-                json.put("password", mPassword);
+                json.put("email", email);
+                json.put("password", password);
+                json.put("gcm_token", gcm_token);
 
                 final Request request = new Request.Builder().url(LOGIN_URL).post(RequestBody.create(JSON, json.toString())).build();
                 Response response = client.newCall(request).execute();

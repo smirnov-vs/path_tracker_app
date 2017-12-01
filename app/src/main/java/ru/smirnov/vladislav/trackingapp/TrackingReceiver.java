@@ -11,7 +11,6 @@ import android.content.pm.PackageManager;
 import android.location.Location;
 import android.os.AsyncTask;
 import android.os.PowerManager;
-import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.util.Log;
 
@@ -26,7 +25,6 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
 
-import okhttp3.Interceptor;
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -49,7 +47,7 @@ public class TrackingReceiver extends BroadcastReceiver {
         }
     }
 
-    private class HttpTask extends AsyncTask<Void, Void, Boolean> {
+    private class SendLogTask extends AsyncTask<Void, Void, Boolean> {
         private final Context context;
         private final PowerManager.WakeLock wakeLock;
         private final Location location;
@@ -139,7 +137,7 @@ public class TrackingReceiver extends BroadcastReceiver {
             wakeLock.release();
         }
 
-        HttpTask(Context context, PowerManager.WakeLock wakeLock, Location location, String token) {
+        SendLogTask(Context context, PowerManager.WakeLock wakeLock, Location location, String token) {
             this.context = context;
             this.wakeLock = wakeLock;
             this.location = location;
@@ -152,7 +150,7 @@ public class TrackingReceiver extends BroadcastReceiver {
     static void setTimer(Context context, long timeout) {
         final PendingIntent intent = PendingIntent.getBroadcast(context, 0, new Intent(context, TrackingReceiver.class), 0);
         final AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
-        alarmManager.setInexactRepeating(AlarmManager.RTC_WAKEUP, Calendar.getInstance().getTimeInMillis(), timeout, intent);
+        alarmManager.setRepeating(AlarmManager.RTC_WAKEUP, Calendar.getInstance().getTimeInMillis(), timeout, intent);
         timerEnabled = true;
     }
 
@@ -197,7 +195,7 @@ public class TrackingReceiver extends BroadcastReceiver {
             String json = new Gson().toJson(location);
             sharedPreferences.edit().putString("lastLocation", json).apply();
 
-            final HttpTask task = new HttpTask(context, wakeLock, location, token);
+            final SendLogTask task = new SendLogTask(context, wakeLock, location, token);
             task.execute();
         });
     }
