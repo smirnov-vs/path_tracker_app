@@ -38,11 +38,6 @@
             </intent-filter>
         </activity>
 
-        <receiver
-            android:name=".TrackingReceiver"
-            android:enabled="true"
-            android:exported="false" />
-
         <service
             android:name=".TrackingService"
             android:enabled="true"

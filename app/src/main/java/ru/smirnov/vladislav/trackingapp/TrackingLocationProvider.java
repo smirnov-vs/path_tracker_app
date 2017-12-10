@@ -1,13 +1,17 @@
 package ru.smirnov.vladislav.trackingapp;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.location.Location;
+import android.location.LocationManager;
+import android.os.Looper;
 
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationCallback;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationResult;
+import com.google.android.gms.tasks.Task;
 import com.google.gson.Gson;
 
 class TrackingLocationProvider {
@@ -29,10 +33,13 @@ class TrackingLocationProvider {
 
             final Location location = locationResult.getLastLocation();
             if (location != null && lastLocation != null) {
-                if (location.distanceTo(lastLocation) < MIN_DISTANCE_METERS)
+                if (location.distanceTo(lastLocation) < MIN_DISTANCE_METERS) {
+                    callback.onNewLocationCallback(null);
                     return;
+                }
             }
             else if (location == null) {
+                callback.onNewLocationCallback(null);
                 return;
             }
             lastLocation = location;
@@ -61,12 +68,13 @@ class TrackingLocationProvider {
             lastLocation = new Gson().fromJson(json, Location.class);
     }
 
+    @SuppressLint("MissingPermission")
     void getNewLocation(NewLocationCallback callback) {
         final LocationRequest locationRequest = new LocationRequest();
         locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY)
-                       .setInterval(LOCATION_INTERVAL_MSEC)
-                       .setExpirationDuration(LOCATION_EXPIRATION_DURATION);
+                .setInterval(LOCATION_INTERVAL_MSEC)
+                .setExpirationDuration(LOCATION_EXPIRATION_DURATION);
         TrackingLocationCallback trackingCallback = new TrackingLocationCallback(callback);
-        locationProviderClient.requestLocationUpdates(locationRequest, trackingCallback, null);
+        locationProviderClient.requestLocationUpdates(locationRequest, trackingCallback, Looper.getMainLooper());
     }
 }
