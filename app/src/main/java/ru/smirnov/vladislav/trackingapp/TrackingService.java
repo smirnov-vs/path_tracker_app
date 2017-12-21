@@ -40,8 +40,29 @@ public class TrackingService extends Service {
     private static final String BACKEND_URL = "https://vladislavsmirnov.ru/api/log";
     private static final MediaType JSON = MediaType.parse("application/json; charset=utf-8");
 
+    private static final float MIN_TIMEOUT_DISTANCE = 50.F;
+    private static final long TIMEOUT_MIN = 40;
+    private static final long TIMEOUT_MAX = 300;
+    private static final long TIMEOUT_STEP = 20;
+
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
     private ScheduledFuture<?> locationHandler = null;
+
+    private long lastTimeout = 0;
+
+    private long getTimeout() {
+        float lastDistance = TrackingLocationProvider.getInstance().getLastDistance();
+
+        if (lastDistance == -1) {
+            lastTimeout = TIMEOUT_MIN;
+        } else if (lastDistance < MIN_TIMEOUT_DISTANCE) {
+            lastTimeout += TIMEOUT_STEP;
+            if (lastTimeout > TIMEOUT_MAX) lastTimeout = TIMEOUT_MAX;
+        } else {
+            lastTimeout = TIMEOUT_MIN;
+        }
+        return lastTimeout;
+    }
 
     @Override
     public IBinder onBind(Intent intent) {
@@ -56,7 +77,7 @@ public class TrackingService extends Service {
         Boolean isTrackingEnabled = sharedPreferences.getBoolean(TRACKING_ENABLED_KEY, false);
 
         if (isTrackingEnabled) {
-            locationHandler = scheduler.scheduleAtFixedRate(this::askLocation, 0, 60, TimeUnit.SECONDS);
+            locationHandler = scheduler.schedule(this::askLocationThread, getTimeout(), TimeUnit.SECONDS);
             Log.i(TAG, "Started sticky");
             return START_STICKY;
         } else {
@@ -71,7 +92,8 @@ public class TrackingService extends Service {
         super.onDestroy();
 
         Log.i(TAG, "Stopped");
-        if (locationHandler != null) locationHandler.cancel(true);
+        if (locationHandler != null && !locationHandler.isDone() && !locationHandler.isCancelled())
+            locationHandler.cancel(true);
     }
 
     private class PendingLocation {
@@ -180,7 +202,13 @@ public class TrackingService extends Service {
         }
     }
 
-    private void askLocation() {
+    private void askLocationThread() {
+        try {
+            askLocation();
+        } catch (InterruptedException ignored) {}
+    }
+
+    private void askLocation() throws InterruptedException {
         if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION) !=
                 PackageManager.PERMISSION_GRANTED &&
                 ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_COARSE_LOCATION)
@@ -218,5 +246,7 @@ public class TrackingService extends Service {
             final SendLogTask task = new SendLogTask(wakeLock, location, token);
             task.execute();
         });
+
+        locationHandler = scheduler.schedule(this::askLocationThread, getTimeout(), TimeUnit.SECONDS);
     }
 }

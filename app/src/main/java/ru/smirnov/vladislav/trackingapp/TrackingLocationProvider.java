@@ -4,18 +4,16 @@ import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.location.Location;
-import android.location.LocationManager;
 import android.os.Looper;
 
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationCallback;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationResult;
-import com.google.android.gms.tasks.Task;
 import com.google.gson.Gson;
 
 class TrackingLocationProvider {
-    private static final float MIN_DISTANCE_METERS = 250.0F;
+    private static final float MIN_DISTANCE_METERS = 500.0F;
     private static final int LOCATION_INTERVAL_MSEC = 1000;
     private static final int LOCATION_EXPIRATION_DURATION = 40 * LOCATION_INTERVAL_MSEC;
 
@@ -23,6 +21,7 @@ class TrackingLocationProvider {
 
     private final FusedLocationProviderClient locationProviderClient;
     private Location lastLocation;
+    private float lastDistance = -1.F;
 
     private class TrackingLocationCallback extends LocationCallback {
         private final NewLocationCallback callback;
@@ -33,7 +32,8 @@ class TrackingLocationProvider {
 
             final Location location = locationResult.getLastLocation();
             if (location != null && lastLocation != null) {
-                if (location.distanceTo(lastLocation) < MIN_DISTANCE_METERS) {
+                lastDistance = location.distanceTo(lastLocation);
+                if (lastDistance < MIN_DISTANCE_METERS) {
                     callback.onNewLocationCallback(null);
                     return;
                 }
@@ -76,5 +76,9 @@ class TrackingLocationProvider {
                 .setExpirationDuration(LOCATION_EXPIRATION_DURATION);
         TrackingLocationCallback trackingCallback = new TrackingLocationCallback(callback);
         locationProviderClient.requestLocationUpdates(locationRequest, trackingCallback, Looper.getMainLooper());
+    }
+
+    float getLastDistance() {
+        return lastDistance;
     }
 }
