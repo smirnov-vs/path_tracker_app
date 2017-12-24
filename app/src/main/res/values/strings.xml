@@ -12,4 +12,5 @@
     <string name="track_on">Tracking is ON</string>
     <string name="track_off">Tracking is OFF</string>
     <string name="logout">Logout</string>
+    <string name="gcm_title">Signal from friend</string>
 </resources>
